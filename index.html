@@ -77,6 +77,13 @@
   .ucard .btn{font-size:14px;padding:6px 10px;align-self:flex-start}
   .board{background:#fff;border-radius:16px;padding:8px 14px;text-align:left;font-size:15px;line-height:1.7;margin:10px 0}
   .muted{opacity:.65;font-size:14px}
+  #introScreen{position:fixed;inset:0;z-index:60;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .6s}
+  #introScreen video{width:100%;height:100%;object-fit:contain;background:#000}
+  #introGate{position:absolute;inset:0;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;background:rgba(29,20,70,.45)}
+  #bIntroPlay{font-size:24px;padding:14px 30px}
+  #bIntroSkip{position:absolute;right:20px;bottom:20px;display:none;opacity:.85}
+  #introScreen.playing #bIntroSkip{display:block}#introScreen.playing #introGate{display:none}
+  #introScreen.done{opacity:0;pointer-events:none}
 </style>
 </head>
 <body>
@@ -123,6 +130,15 @@
     <div class="board" id="board"><b>🏆 银河排行榜</b><br><span class="muted">加载中…</span></div>
     <p class="muted">自动存档：研发成功、交付订单、火箭发射、离开页面时会自动存（至少间隔 30 秒）。手动存档是单独的一格，只有点「手动保存」才会覆盖。切到别的窗口会自动暂停。</p>
   </div>
+</div>
+
+<div id="introScreen">
+  <video id="introVideo" src="assets/intro.mp4" poster="assets/intro-poster.jpg" playsinline preload="auto"></video>
+  <div id="introGate">
+    <button class="btn orange" id="bIntroPlay">▶ 播放开场动画</button>
+    <button class="btn" id="bIntroSkip1">跳过，直接开始</button>
+  </div>
+  <button class="btn" id="bIntroSkip">跳过 ⏭</button>
 </div>
 
 <div class="overlay" id="startScreen">
@@ -1176,6 +1192,13 @@ $('bRenameOk').onclick=()=>{setPlanet($('renameInput').value);$('renameScreen').
 let started=false;
 function beginGame(msg){SND.init();$('startScreen').classList.add('hidden');started=true;toast(msg||`🪐 欢迎来到 ${planetName}！`);hud();}
 $('bStart').onclick=()=>{setPlanet($('nameInput').value);beginGame();setTimeout(()=>toast('🌱 先去左边的农场种萝卜吧～'),1200);setTimeout(()=>toast('🔬 赚到星星币后，去研发中心解锁自动化（按 R）'),5000);};
+// ---- opening animation (assets/intro.mp4): plays before the start screen, skippable ----
+(function(){const scr=$('introScreen'),v=$('introVideo');if(!scr||!v)return;let gone=false;
+  const end=()=>{if(gone)return;gone=true;try{v.pause();}catch(e){}scr.classList.add('done');setTimeout(()=>scr.remove(),700);};
+  $('bIntroPlay').onclick=()=>{scr.classList.add('playing');const p=v.play();if(p&&p.catch)p.catch(end);};
+  $('bIntroSkip').onclick=end;$('bIntroSkip1').onclick=end;v.addEventListener('ended',end);v.addEventListener('error',end);
+  addEventListener('keydown',e=>{if(gone)return;if(['Escape','Enter','Space'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();scr.classList.contains('playing')?end():$('bIntroPlay').click();}},true);
+})();
 $('contInfo').addEventListener('click',e=>{const b=e.target.closest('[data-load]');if(!b||!saves[b.dataset.load])return;restore(saves[b.dataset.load]);beginGame(`📂 已读取${KIND_NAME[b.dataset.load]}，欢迎回到 ${planetName}！`);});
 
 // ================= Loop =================

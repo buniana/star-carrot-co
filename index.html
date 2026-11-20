@@ -58,6 +58,16 @@
   kbd{font-family:Fredoka;background:#fff;border-radius:6px;padding:0 6px;box-shadow:0 2px 0 #ccb}
   #orders{max-height:46vh;overflow:auto}
   #topright{flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
+  @media (max-width:700px){
+    #topright{flex-direction:column;align-items:flex-end;gap:6px;max-width:none}
+    #topright .btn{font-size:15px;padding:6px 9px;min-width:40px}
+    #topright .lbl{display:none}
+    #stats{max-width:calc(100vw - 80px);gap:5px}#stats .pill{font-size:13px;padding:4px 9px}
+    #gravity{display:none}
+    #planet{top:auto;bottom:220px;font-size:14px}
+    #toasts{top:120px;width:calc(100vw - 90px);left:12px;transform:none}
+    .toast{font-size:14px}
+  }
   #labBtn{position:absolute;right:20px;bottom:40px;font-size:20px;padding:12px 18px}
   .touch #labBtn{bottom:130px;font-size:16px;padding:8px 12px}
   #labBtn.glow{animation:glow 1.2s ease-in-out infinite alternate}
@@ -92,13 +102,13 @@
 <div id="hud">
   <div id="stats"></div>
   <div id="topright">
-    <button class="btn" id="bPause">⏸ 暂停</button>
-    <button class="btn" id="bBrand">📖 品牌图鉴</button>
-    <button class="btn" id="bRename">✏️ 星球</button>
+    <button class="btn" id="bPause" title="暂停">⏸<span class="lbl"> 暂停</span></button>
+    <button class="btn" id="bBrand" title="品牌图鉴">📖<span class="lbl"> 品牌图鉴</span></button>
+    <button class="btn" id="bRename" title="星球">✏️<span class="lbl"> 星球</span></button>
     <button class="btn" id="bMusic">🎵</button>
     <button class="btn" id="bSfx">🔊</button>
-    <button class="btn" id="bReset">🔄 重置</button>
-    <button class="btn" id="bHelp">❓</button>
+    <button class="btn" id="bReset" title="重置">🔄<span class="lbl"> 重置</span></button>
+    <button class="btn" id="bHelp" title="怎么玩">❓</button>
   </div>
   <div id="orders"></div>
   <div id="planet" class="pill">🪐 <span id="planetName">我的星球</span></div>
@@ -1145,7 +1155,7 @@ async function loadBoard(){const el=$('board');
   catch(e){el.innerHTML='<b>🏆 银河排行榜</b><br><span class="muted">用 <kbd>python3 server.py</kbd> 启动后端就能看到排行榜啦</span>';}}
 function setPause(v){paused=v;$('pauseScreen').classList.toggle('hidden',!v);if(v){renderSaveStatus();loadBoard();}}
 $('bPause').onclick=()=>{if(started)setPause(true);};$('bResume').onclick=()=>setPause(false);
-$('bSaveNow').onclick=async()=>{const w=await writeSave('manual');toast(`💾 手动存档已保存到${w}`);};
+$('bSaveNow').onclick=async()=>{const w=await writeSave('manual');toast(`💾 手动存档已保存到${w}`);loadBoard();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&started){if(!frozen())setPause(true);flushAuto();}});
 addEventListener('pagehide',flushAuto);
 renderOrders();
@@ -1190,14 +1200,16 @@ $('bHelp').onclick=()=>$('helpScreen').classList.remove('hidden');
 $('bRename').onclick=()=>{$('renameInput').value=planetName;$('renameScreen').classList.remove('hidden');};
 $('bRenameOk').onclick=()=>{setPlanet($('renameInput').value);$('renameScreen').classList.add('hidden');toast(`🪐 欢迎来到 ${planetName}！`);};
 let started=false;
-function beginGame(msg){SND.init();$('startScreen').classList.add('hidden');started=true;toast(msg||`🪐 欢迎来到 ${planetName}！`);hud();}
+let skipIntro=()=>{};
+function beginGame(msg){skipIntro();SND.init();$('startScreen').classList.add('hidden');started=true;toast(msg||`🪐 欢迎来到 ${planetName}！`);hud();}
 $('bStart').onclick=()=>{setPlanet($('nameInput').value);beginGame();setTimeout(()=>toast('🌱 先去左边的农场种萝卜吧～'),1200);setTimeout(()=>toast('🔬 赚到星星币后，去研发中心解锁自动化（按 R）'),5000);};
 // ---- opening animation (assets/intro.mp4): plays before the start screen, skippable ----
 (function(){const scr=$('introScreen'),v=$('introVideo');if(!scr||!v)return;let gone=false;
   const end=()=>{if(gone)return;gone=true;try{v.pause();}catch(e){}scr.classList.add('done');setTimeout(()=>scr.remove(),700);};
   $('bIntroPlay').onclick=()=>{scr.classList.add('playing');const p=v.play();if(p&&p.catch)p.catch(end);};
+  skipIntro=end;
   $('bIntroSkip').onclick=end;$('bIntroSkip1').onclick=end;v.addEventListener('ended',end);v.addEventListener('error',end);
-  addEventListener('keydown',e=>{if(gone)return;if(['Escape','Enter','Space'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();scr.classList.contains('playing')?end():$('bIntroPlay').click();}},true);
+  addEventListener('keydown',e=>{if(gone||started)return;if(['Escape','Enter','Space'].includes(e.code)){e.preventDefault();e.stopImmediatePropagation();scr.classList.contains('playing')?end():$('bIntroPlay').click();}},true);
 })();
 $('contInfo').addEventListener('click',e=>{const b=e.target.closest('[data-load]');if(!b||!saves[b.dataset.load])return;restore(saves[b.dataset.load]);beginGame(`📂 已读取${KIND_NAME[b.dataset.load]}，欢迎回到 ${planetName}！`);});
 

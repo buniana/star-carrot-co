@@ -25,7 +25,8 @@ SAVE_DIR = os.path.join(ROOT, "saves")
 SLOT_RE = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 MAX_BODY = 512 * 1024
 LOCK = threading.Lock()
-PRIVATE_PREFIXES = ("/saves", "/.git", "/server.py", "/.claude")
+PRIVATE_NAMES = {"saves", "server.py", "__pycache__"}  # plus every dotfile / dot-directory
+RANGE_RE = re.compile(r"^bytes=(\d*)-(\d*)$")
 
 
 def save_path(slot):
@@ -64,8 +65,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         route, slot = self._route()
         if route is None:
-            if self.path.split("?", 1)[0].startswith(PRIVATE_PREFIXES):
+            if self._is_private():
                 return self._json(404, {"error": "not found"})
+            if self._serve_range():
+                return None
             return super().do_GET()
         if route == "health":
             return self._json(200, {"ok": True})
@@ -81,6 +84,78 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._json(500, {"error": "corrupt save"})
         return self._json(404, {"error": "not found"})
 
+    def do_HEAD(self):
+        if self._route()[0] is not None or self._is_private():
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return None
+        return super().do_HEAD()
+
+    # ---------- static-file guards ----------
+    def _is_private(self):
+        """Resolve the request the same way the static handler will (URL-decoding,
+        dropping '.'/'..', following symlinks) and refuse anything that lands
+        outside ROOT, on a dotfile, or on a private name — so /%73aves/x.json,
+        /./saves, /%2egit or /assets/../server.py can't slip past."""
+        root = os.path.realpath(ROOT)
+        target = os.path.realpath(self.translate_path(self.path))
+        if target != root and not target.startswith(root + os.sep):
+            return True
+        rel = os.path.relpath(target, root)
+        if rel == ".":
+            return False
+        parts = rel.split(os.sep)
+        return any(p.startswith(".") for p in parts) or parts[0].lower() in PRIVATE_NAMES
+
+    def end_headers(self):
+        if not self.path.startswith("/api/"):
+            self.send_header("Accept-Ranges", "bytes")
+        super().end_headers()
+
+    def _serve_range(self):
+        """Answer a single 'Range: bytes=a-b' request with 206 (Safari needs this to play video)."""
+        rng = self.headers.get("Range")
+        if not rng:
+            return False
+        path = self.translate_path(self.path)
+        if not os.path.isfile(path):
+            return False
+        m = RANGE_RE.match(rng.strip())
+        if not m or (m.group(1) == "" and m.group(2) == ""):
+            return False  # multi-range or malformed: fall back to the full file
+        size = os.path.getsize(path)
+        if m.group(1) == "":
+            start, end = max(0, size - int(m.group(2))), size - 1
+        else:
+            start = int(m.group(1))
+            end = min(int(m.group(2)) if m.group(2) else size - 1, size - 1)
+        if start >= size or start > end:
+            self.send_response(416)
+            self.send_header("Content-Range", f"bytes */{size}")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return True
+        length = end - start + 1
+        self.send_response(206)
+        self.send_header("Content-Type", self.guess_type(path))
+        self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+        self.send_header("Content-Length", str(length))
+        self.end_headers()
+        with open(path, "rb") as f:
+            f.seek(start)
+            left = length
+            while left > 0:
+                chunk = f.read(min(64 * 1024, left))
+                if not chunk:
+                    break
+                try:
+                    self.wfile.write(chunk)
+                except (BrokenPipeError, ConnectionResetError):
+                    break
+                left -= len(chunk)
+        return True
+
     def do_POST(self):
         route, slot = self._route()
         if route != "save":
@@ -89,8 +164,10 @@ class Handler(SimpleHTTPRequestHandler):
             n = int(self.headers.get("Content-Length", "0"))
         except ValueError:
             n = 0
-        if n <= 0 or n > MAX_BODY:
-            return self._json(413, {"error": "bad size"})
+        if n <= 0:
+            return self._json(400, {"error": "empty body"})
+        if n > MAX_BODY:
+            return self._json(413, {"error": "too large"})
         try:
             data = json.loads(self.rfile.read(n).decode("utf-8"))
         except (ValueError, UnicodeDecodeError):

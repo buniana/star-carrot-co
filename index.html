@@ -56,21 +56,36 @@
   .help{text-align:left;font-size:16px;line-height:1.8}
   .help li{margin:2px 0}
   kbd{font-family:Fredoka;background:#fff;border-radius:6px;padding:0 6px;box-shadow:0 2px 0 #ccb}
+  #orders{max-height:46vh;overflow:auto}
+  #topright{flex-wrap:wrap;justify-content:flex-end;max-width:60vw}
+  #labBtn{position:absolute;right:20px;bottom:40px;font-size:20px;padding:12px 18px}
+  .touch #labBtn{bottom:130px;font-size:16px;padding:8px 12px}
+  #labBtn.glow{animation:glow 1.2s ease-in-out infinite alternate}
+  @keyframes glow{from{box-shadow:0 4px 0 rgba(61,42,110,.3),0 0 0 0 rgba(255,216,77,.9)}to{box-shadow:0 4px 0 rgba(61,42,110,.3),0 0 0 10px rgba(255,216,77,0)}}
+  #autoBar{position:absolute;left:12px;bottom:44px;display:flex;flex-wrap:wrap;gap:6px;max-width:40vw}
+  #autoBar .pill{font-size:13px;padding:3px 10px;background:rgba(45,34,102,.8);color:#bfffe3}
+  .touch #autoBar{display:none}
+  .lab-top{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:4px 0 8px}
+  .tier{margin:12px 0 4px;text-align:left;font-size:18px;color:#a06ad0}
+  .ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;text-align:left}
+  .ucard{background:#fff;border-radius:16px;padding:10px 12px;box-shadow:0 3px 0 rgba(61,42,110,.15);border:3px solid transparent;font-size:14px;line-height:1.45;display:flex;flex-direction:column;gap:6px}
+  .ucard h3{margin:0;font-size:17px}
+  .ucard .cost{font-family:Fredoka;font-size:15px}
+  .ucard.locked{opacity:.5}
+  .ucard.owned{border-color:#5dffb0;background:#eafff4}
+  .ucard.can{border-color:#ffd84d}
+  .ucard .btn{font-size:14px;padding:6px 10px;align-self:flex-start}
+  .board{background:#fff;border-radius:16px;padding:8px 14px;text-align:left;font-size:15px;line-height:1.7;margin:10px 0}
+  .muted{opacity:.65;font-size:14px}
 </style>
 </head>
 <body>
 <div id="game"></div>
 
 <div id="hud">
-  <div id="stats">
-    <span class="pill">⭐ <span id="sCoins">0</span></span>
-    <span class="pill">🌱 <span id="sSeeds">0</span></span>
-    <span class="pill">🥕 <span id="sCarrots">0</span></span>
-    <span class="pill">🧃 <span id="sJuice">0</span></span>
-    <span class="pill">📦 <span id="sBox">0</span></span>
-    <span class="pill">💗 <span id="sHearts">0</span></span>
-  </div>
+  <div id="stats"></div>
   <div id="topright">
+    <button class="btn" id="bPause">⏸ 暂停</button>
     <button class="btn" id="bBrand">📖 品牌图鉴</button>
     <button class="btn" id="bRename">✏️ 星球</button>
     <button class="btn" id="bMusic">🎵</button>
@@ -85,7 +100,29 @@
   <div id="prompt"></div>
   <div id="joy"><div id="knob"></div></div>
   <div id="actions"><button class="btn pink" id="bJump">跳</button><button class="btn orange" id="bAct">互动</button></div>
-  <div id="keyhint"><kbd>WASD</kbd> 走路 · <kbd>Shift</kbd> 冲刺 · <kbd>空格</kbd> 低重力跳跃 · <kbd>E</kbd> 互动 · 拖动/左右划触控板 转视角 · 滚轮 缩放</div>
+  <button class="btn orange" id="labBtn">🔬 研发中心</button>
+  <div id="autoBar"></div>
+  <div id="keyhint"><kbd>WASD</kbd> 走路 · <kbd>Shift</kbd> 冲刺 · <kbd>空格</kbd> 跳 · <kbd>E</kbd> 互动 · <kbd>R</kbd> 研发 · <kbd>Esc</kbd> 暂停 · 拖动转视角 · 滚轮缩放</div>
+</div>
+
+<div class="overlay hidden" id="labScreen">
+  <div class="card" style="max-width:880px">
+    <h2>🔬 研发中心 · 自动化与新产品</h2>
+    <div class="lab-top"><span class="pill" id="labBal"></span></div>
+    <p class="muted">用 ⭐ 和 💗 解锁。买下的自动化可以随时点「暂停/启用」。上一层解锁后才能研发下一层～</p>
+    <div id="labGrid"></div>
+    <p style="margin-top:14px"><button class="btn orange" data-close>关闭</button></p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pauseScreen">
+  <div class="card" style="max-width:480px">
+    <h2>⏸ 暂停中</h2>
+    <div id="saveStatus" style="text-align:left;font-size:15px"></div>
+    <p style="margin-top:10px"><button class="btn orange" id="bResume" style="font-size:20px">▶ 继续经营</button> <button class="btn" id="bSaveNow">💾 手动保存</button></p>
+    <div class="board" id="board"><b>🏆 银河排行榜</b><br><span class="muted">加载中…</span></div>
+    <p class="muted">自动存档：研发成功、交付订单、火箭发射、离开页面时会自动存（至少间隔 30 秒）。手动存档是单独的一格，只有点「手动保存」才会覆盖。切到别的窗口会自动暂停。</p>
+  </div>
 </div>
 
 <div class="overlay" id="startScreen">
@@ -96,6 +133,7 @@
     <p>你是公司的小社长！在低重力的星球上种星际萝卜，<br>再把它们送上流水线，做成萝卜汁、包装得可可爱爱～</p>
     <p style="margin-top:14px">给你的星球起个名字吧：</p>
     <input id="nameInput" maxlength="12" placeholder="例如：萝卜星">
+    <div style="margin-top:16px" id="contRow" class="hidden"><p>📂 继续上次的经营：</p><div id="contInfo"></div></div>
     <p style="margin-top:16px"><button class="btn orange" id="bStart" style="font-size:22px;padding:12px 28px">🚀 开始经营！</button></p>
   </div>
 </div>
@@ -125,7 +163,7 @@
 <div class="overlay hidden" id="resetScreen">
   <div class="card" style="max-width:420px">
     <h2>🔄 重新开始？</h2>
-    <p>星星币、种子、萝卜和商品都会清空，回到开始界面。</p>
+    <p>星星币、种子、萝卜、商品和研发进度都会清空（存档也会删除），回到开始界面。</p>
     <p style="margin-top:14px"><button class="btn orange" id="bResetOk">确定重置</button> <button class="btn" data-close>再想想</button></p>
   </div>
 </div>
@@ -138,9 +176,12 @@
       <li>🏪 <b>种子机</b>：5 ⭐ 买 3 包种子</li>
       <li>🧃 <b>榨汁机</b>（工厂左后方）：2 🥕 → 一瓶萝卜汁，送上流水线</li>
       <li>🧺 <b>装箱台</b>（工厂左前方）：3 🥕 → 一箱萝卜，送上流水线</li>
+      <li>🍬🍰🍦 <b>更多萝卜产品</b>：软糖机、烘焙炉、冰淇淋机在研发中心解锁，越高级的产品每根萝卜越值钱</li>
+      <li>🔬 <b>研发中心</b>（右下角按钮或 <kbd>R</kbd>）：用 ⭐ 和 💗 一层层解锁自动化——小星接电话、种子补货、农场无人机、自动包装、自动加工线、自动交付、自动发射……买下的自动化可以随时暂停</li>
+      <li>💾 <b>存档</b>：<kbd>Esc</kbd> 暂停。自动存档在重要节点保存（研发、交付、发射、离开页面）；手动存档在暂停菜单里点「手动保存」，两格互不覆盖，都能读取</li>
       <li>🎀 <b>包装机</b>（粉色拱门）：商品会停在包装机下面等你，站在旁边按 <kbd>E</kbd> 包装！到了马上就按是“完美包装”，额外 +💗</li>
       <li>🚀 <b>货运火箭</b>：把包装好的商品发射出去卖钱</li>
-      <li>🏢 <b>公司总部</b>（出生点往北走）：前台机器人小星帮你接单。📞 <b>电话</b>响了要在 25 秒内去接；🌐 <b>网页订单</b>会一直留在电脑里。接了单之后把包装好的商品拿到前台中间交付，右边订单栏变绿就是货够了</li>
+      <li>🏢 <b>公司总部</b>（出生点往北走）：前台机器人小星帮你接单。📞 <b>电话</b>响了要在 25 秒内去接；🌐 <b>网页订单</b>会一直留在电脑里。接了单之后把包装好的商品拿到前台中间交付，右边订单栏变绿就是货够了。一开始最多同时接 3 单，研发后可以扩到 8 单</li>
       <li>🎵 右上角 🎵 开关背景音乐，🔊 开关音效</li>
       <li>🩰 <b>芭蕾舞访客</b>：看她头上的气泡，送去她想要的商品，会付双倍 ⭐ 还送 💗</li>
       <li>🌙 星球重力只有 0.3G：跳得很高、落得很慢，萝卜收获时也会飘起来哦</li>
@@ -435,6 +476,55 @@ function makeCrate(packed){
   }
   return g;
 }
+const dotMat=M('#ff8a3d',{emissive:'#4a2000'});
+function makeCake(packed){
+  const g=new THREE.Group();
+  if(packed){
+    add(g,BX(.5,.4,.5),M('#ffc4dc'),0,.2,0);
+    add(g,BX(.52,.06,.52),mats.pink,0,.42,0);
+    add(g,new THREE.CircleGeometry(.12,20),M('#fff3df'),0,.22,.252,{cast:false});
+    add(g,S(.08,10,8),mats.yellow,-.08,.5,0,{s:[1.4,.8,.8]});add(g,S(.08,10,8),mats.yellow,.08,.5,0,{s:[1.4,.8,.8]});
+  }else{
+    add(g,CY(.24,.24,.12,24),M('#fff3df'),0,.04,0);
+    add(g,CY(.2,.2,.24,24),M('#ffcf9a'),0,.2,0);
+    add(g,CY(.21,.21,.06,24),M('#fff6ec'),0,.34,0);
+    for(let i=0;i<6;i++){const a=i/6*Math.PI*2;add(g,S(.035,8,6),dotMat,Math.cos(a)*.15,.39,Math.sin(a)*.15);}
+    const c=makeCarrot(false);c.scale.setScalar(.45);c.position.set(0,.37,0);c.userData.star.visible=false;g.add(c);
+  }
+  return g;
+}
+function makeCandy(packed){
+  const g=new THREE.Group();const cols=['#ff8a3d','#ffb36b','#ffd84d','#ff9a3d','#ffc48a'];
+  if(packed){
+    add(g,CY(.17,.17,.36,22),M('#ffffff',{transparent:true,opacity:.5}),0,.18,0);
+    for(let i=0;i<10;i++)add(g,S(.05,8,6),M(cols[i%5]),rand(-.09,.09),.06+i*.028,rand(-.09,.09),{cast:false});
+    add(g,CY(.18,.18,.08,22),mats.pink,0,.4,0);add(g,starGeo,mats.yellow,0,.5,0,{s:[.6,.6,.6]});
+  }else{
+    add(g,CY(.25,.18,.08,22),M('#fff3df'),0,.04,0);
+    for(let i=0;i<8;i++)add(g,S(.06,8,6),M(cols[i%5]),rand(-.13,.13),.12+Math.random()*.05,rand(-.13,.13));
+  }
+  return g;
+}
+function makeIcecream(packed){
+  const g=new THREE.Group();
+  if(packed){add(g,CY(.2,.15,.36,22),M('#fff3df'),0,.18,0);add(g,CY(.205,.205,.1,22),mats.orange,0,.2,0,{cast:false});
+    add(g,CY(.21,.21,.06,22),mats.pink,0,.39,0);add(g,starGeo,mats.yellow,0,.5,0,{s:[.6,.6,.6]});}
+  else{add(g,new THREE.ConeGeometry(.13,.36,16),M('#e8b46a'),0,.18,0,{r:[Math.PI,0,0]});
+    add(g,S(.15,16,12),M('#ffb36b'),0,.42,0);add(g,S(.12,16,12),M('#fff3df'),0,.6,0);
+    const c=makeCarrot(false);c.scale.setScalar(.3);c.position.set(.04,.66,0);c.rotation.z=-.5;c.userData.star.visible=false;g.add(c);}
+  return g;
+}
+// ---- product catalogue ----
+const PROD={
+  juice:{n:'萝卜汁',e:'🧃',cost:{carrots:2},price:8,make:makeJuice},
+  box:{n:'萝卜礼盒',e:'📦',cost:{carrots:3},price:12,make:makeCrate},
+  candy:{n:'萝卜软糖',e:'🍬',cost:{carrots:2},price:10,make:makeCandy,need:'candy'},
+  cake:{n:'萝卜蛋糕',e:'🍰',cost:{carrots:4},price:20,make:makeCake,need:'cake'},
+  icecream:{n:'萝卜冰淇淋',e:'🍦',cost:{carrots:5},price:28,make:makeIcecream,need:'icecream'},
+};
+const PKEYS=Object.keys(PROD);
+const RAW={carrots:'🥕'};
+const costStr=c=>Object.entries(c).map(([r,q])=>`${RAW[r]}×${q}`).join(' ');
 
 // ================= Labels / sprites =================
 function labelSprite(text,{bg='#fff6e8',fg='#3d2a6e',size=44,h=.55}={}){
@@ -503,13 +593,19 @@ add(farmG,BX(10,.06,10),M('#9a7fd0'),-9.2,.03,.3,{recv:true,cast:false});
  [-14.2,-4.2].forEach(x=>{add(farmG,BX(.08,.08,4),fenceM,x,.55,-2.7);add(farmG,BX(.08,.08,4),fenceM,x,.55,3.3);});}
 const farmLabel=labelSprite('🌱 星际农场',{h:.7});farmLabel.position.set(-9.2,3.2,-4.7);farmG.add(farmLabel);
 const plots=[];
-for(let i=0;i<3;i++)for(let j=0;j<3;j++){
-  const x=-12+i*2.8,z=-2.5+j*2.8;const pg=new THREE.Group();pg.position.set(x,0,z);farmG.add(pg);
+// carrot field extension (unlocked in R&D)
+const extG=new THREE.Group();extG.visible=false;world.add(extG);
+add(extG,BX(9.6,.06,2.8),M('#9a7fd0'),-11.8,.03,8.2,{recv:true,cast:false});
+{const el=labelSprite('🥕 新萝卜田',{h:.7});el.position.set(-11.8,2.6,6.8);extG.add(el);}
+const plotSpots=[];for(let i=0;i<3;i++)for(let j=0;j<3;j++)plotSpots.push([-12+i*2.8,-2.5+j*2.8,farmG,false]);
+[-14.6,-11.8,-9].forEach(x=>plotSpots.push([x,8.2,extG,true]));
+for(const [x,z,parent,ext] of plotSpots){
+  const pg=new THREE.Group();pg.position.set(x,0,z);parent.add(pg);
   add(pg,BX(2.1,.24,2.1),mats.soil,0,.12,0,{recv:true});
   [-.55,0,.55].forEach(dz=>add(pg,BX(1.8,.1,.3),mats.soilD,0,.26,dz,{recv:true,cast:false}));
   const crops=[-.55,0,.55].map((dz,k)=>{const c=makeCarrot(true);c.position.set((k-1)*.5,0,dz);c.visible=false;pg.add(c);return c;});
   const glow=add(pg,new THREE.RingGeometry(1.1,1.25,32),new THREE.MeshBasicMaterial({color:'#ffe27a',transparent:true,opacity:0}),0,.27,0,{r:[-Math.PI/2,0,0],cast:false});
-  plots.push({x,z,g:pg,crops,glow,state:'empty',t:0,dur:18});
+  plots.push({x,z,g:pg,crops,glow,state:'empty',t:0,dur:18,ext});
 }
 // seed machine
 {const sm=new THREE.Group();sm.position.set(-9.2,0,-6.3);farmG.add(sm);
@@ -579,6 +675,23 @@ add(ship,new THREE.TorusGeometry(1.8,.12,10,40),M('#ff8fc0'),0,1,0,{r:[Math.PI/2
 for(let i=0;i<8;i++){const a=i/8*Math.PI*2;add(ship,S(.12,10,8),M('#fff08a',{emissive:'#776600'}),Math.cos(a)*1.65,.9,Math.sin(a)*1.65);}
 [0,1,2].forEach(i=>{const a=i/3*Math.PI*2;add(ship,CY(.06,.1,.9,8),M('#d7cff0'),Math.cos(a)*1.1,.35,Math.sin(a)*1.1);});
 col(-5,9,2);
+// ---- unlockable stations (hidden until researched) ----
+function mkStation(x,z,label,build){const g=new THREE.Group();g.position.set(x,0,z);fac.add(g);build(g);const l=labelSprite(label,{h:.5});l.position.set(0,2.5,0);g.add(l);g.visible=false;return {g,x,z};}
+const STN={
+  cake:mkStation(7.4,-3.3,'🍰 烘焙炉',g=>{add(g,BX(1.3,1.3,1),M('#ffd0a8'),0,.65,0);add(g,new THREE.CircleGeometry(.32,20),M('#ffcf5a',{emissive:'#7a3a00'}),0,.7,.51,{cast:false});
+    add(g,new THREE.TorusGeometry(.34,.06,8,20),mats.pink,0,.7,.52);add(g,CY(.15,.18,.7,12),M('#c98b55'),.35,1.6,-.2);add(g,BX(1.4,.12,1.1),mats.pink,0,1.32,0);}),
+  candy:mkStation(7.4,1.9,'🍬 软糖机',g=>{add(g,CY(.45,.55,.8,20),M('#ff4f7a'),0,.4,0);add(g,S(.55,22,16),M('#e6f8ff',{transparent:true,opacity:.5}),0,1.25,0);
+    const cols=['#ff4f7a','#ffd84d','#7fe0b5','#8ff3ff','#ffb3e6'];for(let i=0;i<16;i++)add(g,S(.09,8,6),M(cols[i%5]),rand(-.3,.3),rand(.95,1.4),rand(-.3,.3),{cast:false});add(g,starGeo,mats.yellow,0,1.9,0,{s:[1.3,1.3,1.3]});}),
+  icecream:mkStation(12.4,-3.3,'🍦 冰淇淋机',g=>{add(g,BX(1.1,1.2,.9),M('#bfefff'),0,.6,0);add(g,BX(1.2,.12,1),mats.pink,0,1.24,0);
+    add(g,CY(.12,.08,.3,12),M('#cccccc'),0,1.1,.5);add(g,S(.3,16,12),M('#ffb36b'),0,1.55,0);add(g,S(.24,16,12),M('#fff3df'),0,1.85,0);add(g,starGeo,mats.yellow,0,2.15,0,{s:[1.2,1.2,1.2]});}),
+};
+// ---- farm drone ----
+const drone=new THREE.Group();drone.visible=false;scene.add(drone);
+add(drone,S(.32,18,12),M('#fff6ec'),0,0,0,{s:[1,.7,1]});
+add(drone,new THREE.CircleGeometry(.14,16),M('#7ff3ff',{emissive:'#1f6a7a'}),0,0,.3,{cast:false});
+const droneProps=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([a,b])=>{add(drone,CY(.03,.03,.32,6),M('#ff8a3d'),a*.22,.05,b*.22,{r:[0,0,0]});return add(drone,BX(.36,.02,.06),mats.pink,a*.3,.22,b*.3);});
+const droneLight=add(drone,S(.06,8,6),M('#5dffb0',{emissive:'#1f8a5a'}),0,.24,0);
+const DR={pos:new THREE.Vector3(-9.2,4,0),target:null,act:null,cd:0};drone.position.copy(DR.pos);
 // paths
 [[-3,1],[2,2],[5,4],[-2,5],[0,-3],[3,-5],[-5,-3]].forEach(([x,z])=>add(world,new THREE.CylinderGeometry(.6,.65,.06,18),M('#e6dcff'),x,.03,z,{recv:true,cast:false}));
 
@@ -677,8 +790,43 @@ const SND=(()=>{
   addEventListener('pointerdown',()=>{if(ctx&&ctx.state!=='running')ctx.resume();},{passive:true});
   return S;
 })();
-const inv={coins:10,seeds:3,carrots:0,juice:0,box:0,hearts:0};
-function hud(){$('sCoins').textContent=inv.coins;$('sSeeds').textContent=inv.seeds;$('sCarrots').textContent=inv.carrots;$('sJuice').textContent=inv.juice;$('sBox').textContent=inv.box;$('sHearts').textContent=inv.hearts;}
+const inv={coins:10,seeds:3,carrots:0,juice:0,box:0,candy:0,cake:0,icecream:0,hearts:0,earned:0};
+// ---- research / upgrades ----
+const UPG=[
+  {id:'phoneBot',tier:1,e:'📞',n:'小星接电话',d:'电话响了，前台机器人小星会帮你接起来，订单直接进订单栏',c:20,auto:1},
+  {id:'seedBot',tier:1,e:'🌱',n:'种子自动补货',d:'种子少于 3 包时，自动花 5⭐ 买 3 包',c:25,auto:1},
+  {id:'slots1',tier:1,e:'📋',n:'大号订单夹',d:'同时能接的订单 3 → 5 个，订单来得也更勤',c:35},
+  {id:'fastGrow',tier:1,e:'⚡',n:'星光肥料',d:'萝卜生长 18 秒 → 11 秒',c:40},
+  {id:'farmExt',tier:1,e:'🥕',n:'萝卜田扩建',d:'农场南边新开 3 块萝卜田（9 → 12 块）',c:50,h:2},
+  {id:'candy',tier:1,e:'🍬',n:'软糖机',d:'新商品：萝卜软糖（🥕×2），卖 10⭐',c:45},
+  {id:'webBot',tier:2,e:'🌐',n:'小星收网页单',d:'官网来的订单，小星自动收进订单栏',c:45,auto:1,req:['phoneBot']},
+  {id:'farmBot',tier:2,e:'🛸',n:'农场无人机',d:'自动收获成熟的萝卜，并自动补种',c:80,auto:1,req:['seedBot']},
+  {id:'autoPack',tier:2,e:'🦾',n:'自动包装臂',d:'商品在包装机下停 1.5 秒会被自动包装（自己手快按依然有完美 💗）',c:90,h:3,auto:1},
+  {id:'cake',tier:2,e:'🍰',n:'烘焙炉',d:'新商品：萝卜蛋糕（🥕×4），卖 20⭐',c:70,req:['candy']},
+  {id:'slots2',tier:2,e:'🗂️',n:'订单柜',d:'同时能接的订单 5 → 8 个',c:90,req:['slots1']},
+  {id:'fastBelt',tier:2,e:'⏩',n:'高速传送带',d:'流水线速度 ×1.8',c:60,req:['autoPack']},
+  {id:'autoCraft',tier:3,e:'🏭',n:'自动加工线',d:'按订单和访客的需求，自动用库存萝卜生产商品送上流水线',c:150,h:5,auto:1,req:['autoPack']},
+  {id:'autoDeliver',tier:3,e:'🛎️',n:'小星自动交付',d:'订单的货一凑齐，小星就自动寄出去',c:140,h:6,auto:1,req:['webBot']},
+  {id:'icecream',tier:3,e:'🍦',n:'冰淇淋机',d:'新商品：萝卜冰淇淋（🥕×5），卖 28⭐',c:120,h:4,req:['cake']},
+  {id:'autoSell',tier:4,e:'🚀',n:'自动发射',d:'订单和访客用不上的多余商品，攒够 4 件自动装火箭卖掉',c:120,auto:1,req:['autoDeliver','autoCraft']},
+];
+const UPGBY=Object.fromEntries(UPG.map(u=>[u.id,u]));
+const up={},upOff={};
+const has=id=>!!up[id]&&!upOff[id];
+const prodOn=k=>!PROD[k].need||!!up[PROD[k].need];
+const plotOn=p=>!p.ext||!!up.farmExt;
+const maxOrders=()=>3+(up.slots1?2:0)+(up.slots2?3:0);
+const growDur=()=>up.fastGrow?11:18;
+function hud(){
+  dirty=true;
+  const pills=[['⭐',inv.coins],['💗',inv.hearts],['🌱',inv.seeds],['🥕',inv.carrots]];
+  PKEYS.forEach(k=>{if(prodOn(k))pills.push([PROD[k].e,inv[k]]);});
+  $('stats').innerHTML=pills.map(([e,v])=>`<span class="pill">${e} ${v}</span>`).join('');
+  const any=UPG.some(u=>!up[u.id]&&(u.req||[]).every(r=>up[r])&&inv.coins>=u.c&&inv.hearts>=(u.h||0));
+  $('labBtn').classList.toggle('glow',any);
+  if(any&&!hud.nudged&&started){hud.nudged=1;toast('🔬 研发中心有可以解锁的新技术啦！（按 R）');}
+}
+function renderAutoBar(){$('autoBar').innerHTML=UPG.filter(u=>u.auto&&up[u.id]).map(u=>`<span class="pill" style="${upOff[u.id]?'opacity:.45':''}">${u.e} ${u.n}${upOff[u.id]?' · 关':''}</span>`).join('');}
 function toast(t){const d=document.createElement('div');d.className='toast';d.textContent=t;$('toasts').appendChild(d);setTimeout(()=>d.remove(),2900);while($('toasts').children.length>4)$('toasts').firstChild.remove();}
 let planetName=store.get('scc_planet','');
 function setPlanet(n){planetName=(n||'').trim()||'萝卜星';$('planetName').textContent=planetName;drawSign(planetName);store.set('scc_planet',planetName);}
@@ -699,32 +847,47 @@ function floatToPlayer(obj,from,delay=0){obj.position.copy(from);scene.add(obj);
 // ================= Belt items =================
 const items=[];const spawnQ=[];
 function queueItem(type){spawnQ.push(type);}
-function spawnItem(type){const m=type==='juice'?makeJuice(false):makeCrate(false);m.position.set(BELT.x0,BELT.y,BELT.z);scene.add(m);items.push({m,type,packed:false,x:BELT.x0,pop:0});puff(m.position.clone(),4);}
+function spawnItem(type){const m=PROD[type].make(false);m.position.set(BELT.x0,BELT.y,BELT.z);scene.add(m);items.push({m,type,packed:false,x:BELT.x0,pop:0});puff(m.position.clone(),4);}
+const canAfford=c=>Object.entries(c).every(([r,q])=>inv[r]>=q);
+const STN_POS={juice:[5,-3],box:[4.4,1.1],cake:[7.4,-3.3],candy:[7.4,1.9],icecream:[12.4,-3.3]};
+const CRAFT_MSG={juice:'🧃 咕噜咕噜～果汁在低重力下变成了小水球！',box:'🧺 装好一箱，送上流水线！',cake:'🍰 烤箱叮～香喷喷的萝卜蛋糕出炉！',candy:'🍬 咕噜噜～萝卜软糖一颗颗滚出来！',icecream:'🍦 呜呜～萝卜冰淇淋在低重力下慢慢冒尖！'};
+function craft(k,auto){const p=PROD[k];if(!canAfford(p.cost)){if(!auto){SND.no();toast(`需要 ${costStr(p.cost)}`);}return false;}
+  for(const [r,q] of Object.entries(p.cost))inv[r]-=q;queueItem(k);const [x,z]=STN_POS[k];
+  if(k==='juice'){juicer.userData.shake=1.2;if(!auto)SND.juice();blobs(new THREE.Vector3(5,2,-3),auto?4:10);}
+  else{if(!auto)(k==='box'?SND.knock:SND.pop)();sparkle(new THREE.Vector3(x,1.4,z),auto?3:6,k==='box'?'#ff8a3d':'#ff8fc0');}
+  if(!auto)toast(CRAFT_MSG[k]);hud();return true;}
+function packItem(cand,manual){
+  const perfect=manual&&(cand.wait||0)<.9;scene.remove(cand.m);cand.m=PROD[cand.type].make(true);cand.m.position.set(cand.x,BELT.y,BELT.z);scene.add(cand.m);cand.packed=true;cand.pop=.4;
+  if(!manual){pressT=.35;sparkle(cand.m.position.clone().add(new THREE.Vector3(0,.6,0)),4);return;}
+  if(perfect){SND.perfect();inv.hearts++;toast('💗 完美包装！手速超快～');sparkle(cand.m.position.clone().add(new THREE.Vector3(0,.6,0)),14,'#ff8fc0');}else{toast('🎀 包装好啦！');sparkle(cand.m.position.clone().add(new THREE.Vector3(0,.6,0)),6);}}
+function plantPlot(p,auto){if(inv.seeds<=0){if(!auto)toast('🌱 种子用完了，种子机 5⭐ 买 3 包');return false;}inv.seeds--;p.state='grow';p.t=0;p.dur=growDur();p.crops.forEach(c=>{c.visible=true;});sparkle(new THREE.Vector3(p.x,.6,p.z),auto?3:6,'#7fe0b5');if(!auto){SND.plant();toast('🌱 种下啦！低重力下萝卜长得特别快');}return true;}
+function harvestPlot(p,auto){p.state='empty';p.glow.material.opacity=0;p.crops.forEach((c,k)=>{c.visible=false;if(!auto){const f=makeCarrot();floatToPlayer(f,c.getWorldPosition(new THREE.Vector3()),k*.15);}});inv.carrots+=3;
+  if(auto)sparkle(new THREE.Vector3(p.x,1,p.z),5,'#ff8a3d');else{SND.harvest();toast('🥕 +3 星际萝卜！看，它们飘起来了～');}}
+function buySeeds(auto){if(inv.coins<5){if(!auto){SND.no();toast('⭐ 星星币不够啦');}return false;}inv.coins-=5;inv.seeds+=3;if(!auto){SND.coin();toast('🌱 +3 种子');}sparkle(new THREE.Vector3(-9.2,2,-5.6),auto?3:6);return true;}
+function launch(sell,auto){const n=PKEYS.reduce((s,k)=>s+(sell[k]||0),0);if(!n)return;let earn=0;PKEYS.forEach(k=>{const q=sell[k]||0;earn+=q*PROD[k].price;inv[k]-=q;});
+  inv.coins+=earn;inv.earned+=earn;toast(`🚀 ${auto?'自动':''}发射！送往银河各地～ +${earn}⭐`);rocket.userData.fly=4.5;SND.rocket();setTimeout(()=>SND.coin(),600);flame.visible=true;puff(new THREE.Vector3(9.5,.3,6.5),14);hud();markSave();}
+const stockStr=()=>PKEYS.filter(k=>inv[k]>0).map(k=>`${PROD[k].e}${inv[k]}`).join(' ');
+const totalStock=()=>PKEYS.reduce((s,k)=>s+inv[k],0);
 
 // ================= Interactions =================
 let pressT=0;
 const interactables=[
-  ...plots.map(p=>({pos:()=>new THREE.Vector3(p.x,0,p.z),r:1.7,label(){
+  ...plots.map(p=>({pos:()=>new THREE.Vector3(p.x,0,p.z),r:1.7,on:()=>plotOn(p),label(){
       if(p.state==='empty')return inv.seeds>0?'种下星际萝卜 (🌱-1)':'没有种子啦，去种子机买吧';
       if(p.state==='grow')return `长大中… ${Math.floor(p.t/p.dur*100)}%`;return '✨ 收获星际萝卜！';},
-    act(){if(p.state==='empty'){if(inv.seeds<=0){toast('🌱 种子用完了，种子机 5⭐ 买 3 包');return;}inv.seeds--;p.state='grow';p.t=0;p.crops.forEach(c=>{c.visible=true;});sparkle(new THREE.Vector3(p.x,.6,p.z),6,'#7fe0b5');SND.plant();toast('🌱 种下啦！低重力下萝卜长得特别快');}
-      else if(p.state==='ripe'){p.state='empty';p.glow.material.opacity=0;p.crops.forEach((c,k)=>{c.visible=false;const f=makeCarrot();floatToPlayer(f,c.getWorldPosition(new THREE.Vector3()),k*.15);});inv.carrots+=3;SND.harvest();toast('🥕 +3 星际萝卜！看，它们飘起来了～');}
-      else toast('还要再等一会儿哦 ⏳');}})),
-  {pos:()=>new THREE.Vector3(-9.2,0,-6.3),r:2,label:()=>'买种子 (5⭐ → 🌱×3)',act(){if(inv.coins<5){SND.no();toast('⭐ 星星币不够啦');return;}inv.coins-=5;inv.seeds+=3;SND.coin();sparkle(new THREE.Vector3(-9.2,2,-5.6),6);toast('🌱 +3 种子');}},
-  {pos:()=>new THREE.Vector3(5,0,-3),r:2.4,label:()=>'榨一瓶星际萝卜汁 (🥕×2)',act(){if(inv.carrots<2){SND.no();toast('🥕 需要 2 根萝卜');return;}inv.carrots-=2;juicer.userData.shake=1.2;SND.juice();blobs(new THREE.Vector3(5,2,-3),10);queueItem('juice');toast('🧃 咕噜咕噜～果汁在低重力下变成了小水球！');}},
-  {pos:()=>new THREE.Vector3(4.4,0,1.1),r:2,label:()=>'装一箱星际萝卜 (🥕×3)',act(){if(inv.carrots<3){SND.no();toast('🥕 需要 3 根萝卜');return;}inv.carrots-=3;queueItem('crate');SND.knock();sparkle(new THREE.Vector3(4.4,1.2,1.1),5,'#ff8a3d');toast('🧺 装好一箱，送上流水线！');}},
-  {pos:()=>new THREE.Vector3(BELT.zone,0,.5),r:2.2,label(){return items.some(i=>!i.packed)?(items.some(i=>!i.packed&&i.x>=BELT.zone-.01)?'🎀 商品到啦！快按下包装（越快越完美）':'🎀 商品正在路上，到包装机下面就能包装'):'流水线空空的，去榨汁或装箱吧';},act(){
+    act(){if(p.state==='empty')plantPlot(p,false);else if(p.state==='ripe')harvestPlot(p,false);else toast('还要再等一会儿哦 ⏳');}})),
+  {pos:()=>new THREE.Vector3(-9.2,0,-6.3),r:2,label:()=>'买种子 (5⭐ → 🌱×3)',act(){buySeeds(false);}},
+  ...PKEYS.map(k=>({pos:()=>new THREE.Vector3(...[STN_POS[k][0],0,STN_POS[k][1]]),r:k==='juice'?2.4:2,on:()=>prodOn(k),
+    label:()=>`做一份${PROD[k].n} (${costStr(PROD[k].cost)})`,act(){craft(k,false);}})),
+  {pos:()=>new THREE.Vector3(BELT.zone,0,.5),r:2.2,label(){return items.some(i=>!i.packed)?(items.some(i=>!i.packed&&i.x>=BELT.zone-.01)?'🎀 商品到啦！快按下包装（越快越完美）':'🎀 商品正在路上，到包装机下面就能包装'):'流水线空空的，去加工站做点商品吧';},act(){
       pressT=.35;SND.press();const cand=items.filter(i=>!i.packed&&Math.abs(i.x-BELT.zone)<.7).sort((a,b)=>b.x-a.x)[0];
-      if(!cand){SND.no();toast('咚！没包到，看准时机再试试');return;}
-      const perfect=(cand.wait||0)<.9;scene.remove(cand.m);cand.m=cand.type==='juice'?makeJuice(true):makeCrate(true);cand.m.position.set(cand.x,BELT.y,BELT.z);scene.add(cand.m);cand.packed=true;cand.pop=.4;
-      if(perfect){SND.perfect();inv.hearts++;toast('💗 完美包装！手速超快～');sparkle(cand.m.position.clone().add(new THREE.Vector3(0,.6,0)),14,'#ff8fc0');}else{toast('🎀 包装好啦！');sparkle(cand.m.position.clone().add(new THREE.Vector3(0,.6,0)),6);}}},
-  {pos:()=>new THREE.Vector3(9.5,0,6.5),r:2.6,label(){return rocket.userData.fly?'火箭飞行中…':(inv.juice+inv.box>0?`发射货运火箭！卖出 🧃${inv.juice} 📦${inv.box}`:'还没有包装好的商品可以发射');},act(){
-      if(rocket.userData.fly)return;if(inv.juice+inv.box<=0){toast('先在流水线上包装商品吧');return;}
-      const earn=inv.juice*8+inv.box*12;inv.coins+=earn;toast(`🚀 发射！送往银河各地～ +${earn}⭐`);inv.juice=0;inv.box=0;rocket.userData.fly=4.5;SND.rocket();setTimeout(()=>SND.coin(),600);flame.visible=true;puff(new THREE.Vector3(9.5,.3,6.5),14);}},
-  {pos:()=>B.pos,r:2.2,label(){if(!B.order)return '和芭蕾舞访客打招呼';return `交付订单 🧃${B.order.juice} 📦${B.order.box}`;},act(){
+      if(!cand){SND.no();toast('咚！没包到，看准时机再试试');return;}packItem(cand,true);}},
+  {pos:()=>new THREE.Vector3(9.5,0,6.5),r:2.6,label(){return rocket.userData.fly?'火箭飞行中…':(totalStock()>0?`发射货运火箭！卖出 ${stockStr()}`:'还没有包装好的商品可以发射');},act(){
+      if(rocket.userData.fly)return;if(totalStock()<=0){toast('先在流水线上包装商品吧');return;}launch(Object.fromEntries(PKEYS.map(k=>[k,inv[k]])),false);}},
+  {pos:()=>B.pos,r:2.2,label(){if(!B.order)return '和芭蕾舞访客打招呼';return `交付订单 ${need(B.order)}`;},act(){
       if(!B.order){SND.twinkle();B.dance=2.6;B.vy=4;B.ground=false;toast('🩰 访客：“这里转圈圈好轻松呀！”');return;}
-      if(inv.juice<B.order.juice||inv.box<B.order.box){SND.no();toast(`🩰 她想要：🧃×${B.order.juice} 📦×${B.order.box}（包装好的哦）`);return;}
-      inv.juice-=B.order.juice;inv.box-=B.order.box;const pay=B.order.juice*16+B.order.box*24;inv.coins+=pay;inv.hearts+=2;SND.coin();SND.twinkle();
+      if(!canFill(B.order)){SND.no();toast(`🩰 她想要：${need(B.order)}（包装好的哦）`);return;}
+      takeGoods(B.order);const pay=B.order.reward;inv.coins+=pay;inv.earned+=pay;inv.hearts+=2;SND.coin();SND.twinkle();markSave();
       toast(`🩰 “好可爱的包装！”+${pay}⭐ +2💗`);B.order=null;B.cool=rand(14,22);B.dance=3;B.vy=4.5;B.ground=false;drawBubble('谢谢你！','💗 跳支舞给你看');sparkle(B.pos.clone().add(new THREE.Vector3(0,2,0)),16,'#ff8fc0');}},
 ];
 let nearest=null;
@@ -813,25 +976,32 @@ let botTalk=0;
 // ---- orders ----
 const CUST=['🪐 土星奶奶','🌙 月亮面包店','☄️ 彗星快递员','🌌 银河咖啡馆','👽 火星小学','🛸 外星旅行团','⭐ 北极星医院','🐰 月兔甜品屋','🚀 宇航员训练营','🌟 星光幼儿园'];
 const orders=[];let incoming=null;const inbox=[];let nextOrderT=14;
-function newOrder(src){const j=Math.floor(rand(0,3)),b=Math.floor(rand(0,3))||(j?0:1);const base=j*12+b*18;
-  return {src,cust:CUST[Math.floor(Math.random()*CUST.length)],juice:j,box:b,reward:Math.round(base*(src==='phone'?1.6:1.35))};}
-const canFill=o=>inv.juice>=o.juice&&inv.box>=o.box;
-const need=o=>[o.juice?`🧃×${o.juice}`:'',o.box?`📦×${o.box}`:''].filter(Boolean).join(' ');
+function randItems(maxKinds,maxQ){const avail=PKEYS.filter(prodOn);const kinds=1+Math.floor(Math.random()*Math.min(maxKinds,avail.length));const pick=avail.slice().sort(()=>Math.random()-.5).slice(0,kinds);
+  // favour newly unlocked products a little
+  const items={};pick.forEach(k=>items[k]=1+Math.floor(Math.random()*maxQ));return items;}
+const itemsValue=it=>Object.entries(it).reduce((s,[k,q])=>s+PROD[k].price*q,0);
+function newOrder(src){const items=randItems(up.slots1?3:2,3);return {src,cust:CUST[Math.floor(Math.random()*CUST.length)],items,reward:Math.round(itemsValue(items)*(src==='phone'?1.6:1.35))};}
+const canFill=o=>Object.entries(o.items).every(([k,q])=>inv[k]>=q);
+const need=o=>Object.entries(o.items).map(([k,q])=>`${PROD[k].e}×${q}`).join(' ');
+const takeGoods=o=>Object.entries(o.items).forEach(([k,q])=>inv[k]-=q);
 function renderOrders(){const el=$('orders');
-  if(!orders.length){el.innerHTML='<div class="oh">📋 订单</div><div class="oe">还没有订单～去前台接单吧</div>';return;}
-  el.innerHTML='<div class="oh">📋 订单 '+orders.length+'/3</div>'+orders.map(o=>`<div class="oi ${canFill(o)?'ok':''}">${o.src==='phone'?'📞':'🌐'} ${o.cust}<br><span>${need(o)} → ${o.reward}⭐</span></div>`).join('');}
-function accept(o){SND.chatter();if(orders.length>=3){toast('📋 订单已经排满 3 个啦，先交付一些吧');return false;}orders.push(o);renderOrders();botTalk=1.5;
-  toast(o.src==='phone'?`📞 ${o.cust}：“你好！我要 ${need(o)}！”`:`🌐 收到网页订单：${o.cust} 要 ${need(o)}`);return true;}
+  if(!orders.length){el.innerHTML=`<div class="oh">📋 订单 0/${maxOrders()}</div><div class="oe">还没有订单～去前台接单吧</div>`;return;}
+  el.innerHTML=`<div class="oh">📋 订单 ${orders.length}/${maxOrders()}</div>`+orders.map(o=>`<div class="oi ${canFill(o)?'ok':''}">${o.src==='phone'?'📞':'🌐'} ${o.cust}<br><span>${need(o)} → ${o.reward}⭐</span></div>`).join('');}
+function accept(o,byBot){if(orders.length>=maxOrders()){if(!byBot)toast(`📋 订单已经排满 ${maxOrders()} 个啦，先交付一些吧（研发中心可以扩容）`);return false;}SND.chatter();orders.push(o);renderOrders();botTalk=1.5;
+  const who=byBot?'🤖 小星接到':'';
+  toast(o.src==='phone'?`${who}📞 ${o.cust}：“你好！我要 ${need(o)}！”`:`${who}🌐 网页订单：${o.cust} 要 ${need(o)}`);return true;}
+function deliver(i,byBot){const o=orders.splice(i,1)[0];takeGoods(o);inv.coins+=o.reward;inv.earned+=o.reward;inv.hearts++;renderOrders();SND.coin();SND.sparkle();botTalk=1.5;
+  toast(`🛎️ 小星：“${byBot?'我自动':'已经'}寄给${o.cust}啦！” +${o.reward}⭐ +1💗`);sparkle(new THREE.Vector3(0,2.2,HQ.deskZ),12,'#ffe27a');hud();markSave();}
+function hangUp(){incoming=null;ringSprite.visible=false;phone.rotation.z=0;handset.position.y=.3;handset.rotation.set(0,0,0);}
 const deskPt=x=>()=>new THREE.Vector3(x,0,HQ.deskZ+1.1);
 interactables.push(
   {pos:deskPt(-1.45),r:1.25,label(){return incoming?`📞 接电话（${incoming.cust}）`:'📞 电话安安静静的～';},act(){
-    if(!incoming){toast('📞 还没有人打电话来哦');return;}if(accept(incoming)){incoming=null;ringSprite.visible=false;handset.position.y=.3;handset.rotation.set(0,0,0);}}},
+    if(!incoming){toast('📞 还没有人打电话来哦');return;}if(accept(incoming))hangUp();}},
   {pos:deskPt(1.45),r:1.25,label(){return inbox.length?`🌐 查看网页订单（${inbox.length} 封）`:'🌐 网页订单系统 · 暂无新订单';},act(){
     if(!inbox.length){toast('🌐 网页上暂时没有新订单');return;}if(accept(inbox[0])){inbox.shift();drawScreen(inbox.length,false);webSprite.visible=inbox.length>0;}}},
   {pos:deskPt(0),r:1.25,label(){const o=orders.find(canFill);if(o)return `🛎️ 交付订单：${o.cust}（${need(o)}）`;if(orders.length)return `🛎️ 订单还差货（${need(orders[0])}）`;return '🛎️ 和前台小星聊天';},act(){
     const i=orders.findIndex(canFill);botTalk=1.5;
-    if(i>=0){const o=orders.splice(i,1)[0];inv.juice-=o.juice;inv.box-=o.box;inv.coins+=o.reward;inv.hearts++;renderOrders();SND.coin();SND.sparkle();
-      toast(`🛎️ 小星：“已经寄给${o.cust}啦！” +${o.reward}⭐ +1💗`);sparkle(new THREE.Vector3(0,2.2,HQ.deskZ),12,'#ffe27a');return;}
+    if(i>=0){deliver(i,false);return;}
     const lines=orders.length?[`小星：“${orders[0].cust} 还在等 ${need(orders[0])} 哦～”`,'小星：“去流水线包装好商品再来交付吧！”']:['小星：“电话响了我会叫你！”','小星：“网页订单我一直盯着呢 👀”','小星：“今天的星球天气：晴，有流星～”','小星：“社长加油！”'];
     SND.chatter();toast('🤖 '+lines[Math.floor(Math.random()*lines.length)]);}}
 );
@@ -842,20 +1012,136 @@ function updateHQ(dt){
   bot.rotation.y=angLerp(bot.rotation.y,Math.abs(P.pos.z-HQ.deskZ)<8&&Math.abs(P.pos.x)<8?Math.atan2(P.pos.x-bot.position.x,P.pos.z-bot.position.z):0,dt*3);
   if(botTalk>0){botTalk-=dt;botArms[1].rotation.z=-1.8+Math.sin(T*10)*.3;if(!bot.userData.t){bot.userData.t=1;drawBotFace('talk');}}else{botArms[1].rotation.z*=.9;if(bot.userData.t){bot.userData.t=0;drawBotFace('idle');}}
   if(incoming){incoming.t-=dt;incoming.rt=(incoming.rt||0)-dt;if(incoming.rt<=0){incoming.rt=1.3;SND.ring();}phone.rotation.z=Math.sin(T*40)*.08;handset.position.y=.3+Math.abs(Math.sin(T*20))*.06;ringSprite.position.y=2.1+Math.sin(T*8)*.08;
-    if(incoming.t<=0){toast(`📞 ${incoming.cust} 等不及挂断了…下次早点接哦`);incoming=null;ringSprite.visible=false;phone.rotation.z=0;handset.position.y=.3;}}
+    if(incoming&&has('phoneBot')&&incoming.t<23.5&&orders.length<maxOrders()){accept(incoming,true);hangUp();}
+    else if(incoming&&incoming.t<=0){toast(`📞 ${incoming.cust} 等不及挂断了…${orders.length>=maxOrders()?'（订单满了，小星没法接）':'下次早点接哦'}`);hangUp();}}
+  if(inbox.length&&has('webBot')&&orders.length<maxOrders()){accept(inbox.shift(),true);drawScreen(inbox.length,false);webSprite.visible=inbox.length>0;}
   if(inbox.length){webSprite.position.y=2.1+Math.sin(T*5)*.06;if(Math.floor(T*2)%2!==webSprite.userData.b){webSprite.userData.b=Math.floor(T*2)%2;drawScreen(inbox.length,!!webSprite.userData.b);}}
   if(!started)return;
   nextOrderT-=dt;
-  if(nextOrderT<=0){nextOrderT=rand(18,32);
-    if(Math.random()<.5&&!incoming){incoming=newOrder('phone');incoming.t=25;ringSprite.visible=true;toast('📞 叮铃铃～总部前台的电话响了！（25 秒内去接）');}
-    else if(inbox.length<3){inbox.push(newOrder('web'));drawScreen(inbox.length,true);webSprite.visible=true;SND.mail();toast('🌐 官网来了一封新订单，去总部前台的电脑查看');}}
-  if(Math.floor(T*4)!==updateHQ.k){updateHQ.k=Math.floor(T*4);renderOrders();orders.forEach(o=>{const r=canFill(o);if(r&&!o.ready){SND.ready();toast(`✅ ${o.cust} 的货凑齐啦！去总部前台找小星交付`);}o.ready=r;});}
+  if(nextOrderT<=0){nextOrderT=rand(18,32)*(up.slots2?.55:up.slots1?.75:1);
+    if(Math.random()<.5&&!incoming){incoming=newOrder('phone');incoming.t=25;ringSprite.visible=true;toast(has('phoneBot')?'📞 叮铃铃～小星正在接电话':'📞 叮铃铃～总部前台的电话响了！（25 秒内去接）');}
+    else if(inbox.length<5){inbox.push(newOrder('web'));drawScreen(inbox.length,true);webSprite.visible=true;SND.mail();if(!has('webBot'))toast('🌐 官网来了一封新订单，去总部前台的电脑查看');}}
+  if(Math.floor(T*4)!==updateHQ.k){updateHQ.k=Math.floor(T*4);
+    if(has('autoDeliver')){const i=orders.findIndex(canFill);if(i>=0)deliver(i,true);}
+    renderOrders();orders.forEach(o=>{const r=canFill(o);if(r&&!o.ready&&!has('autoDeliver')){SND.ready();toast(`✅ ${o.cust} 的货凑齐啦！去总部前台找小星交付`);}o.ready=r;});}
 }
+// ================= Automation =================
+function demand(){const d={};PKEYS.forEach(k=>d[k]=0);orders.forEach(o=>Object.entries(o.items).forEach(([k,q])=>d[k]+=q));if(B.order)Object.entries(B.order.items).forEach(([k,q])=>d[k]+=q);return d;}
+function pipeline(){const p={};PKEYS.forEach(k=>p[k]=0);items.forEach(i=>p[i.type]++);spawnQ.forEach(k=>p[k]++);return p;}
+let autoT=0;
+function updateAuto(dt){
+  autoT-=dt;
+  // drone
+  drone.visible=!!up.farmBot;
+  if(drone.visible){
+    droneProps.forEach(p=>p.rotation.y+=dt*30);droneLight.material.emissiveIntensity=has('farmBot')?.6+.4*Math.sin(T*6):.1;
+    if(!DR.target&&has('farmBot')){
+      const ripe=plots.find(p=>p.state==='ripe'&&plotOn(p));
+      const empty=!ripe&&inv.seeds>0&&plots.find(p=>p.state==='empty'&&plotOn(p));
+      const t=ripe||empty;if(t){DR.target=new THREE.Vector3(t.x,2.2,t.z);DR.act=()=>{t.state==='ripe'?harvestPlot(t,true):t.state==='empty'&&plantPlot(t,true);hud();};}
+      else DR.target=null;}
+    const goal=DR.target||new THREE.Vector3(-9.2,4+Math.sin(T)*.3,.3);
+    const dv=goal.clone().sub(DR.pos);const L=dv.length();
+    if(L>.15)DR.pos.addScaledVector(dv.normalize(),Math.min(L,6*dt));
+    else if(DR.target){DR.cd+=dt;if(DR.cd>.35){DR.cd=0;DR.act&&DR.act();DR.target=null;DR.act=null;}}
+    drone.position.copy(DR.pos);drone.position.y+=Math.sin(T*4)*.08;drone.rotation.z=-dv.x*.05;drone.rotation.x=dv.z*.05;
+  }
+  if(autoT>0)return;autoT=.5;
+  if(has('seedBot')&&inv.seeds<3&&inv.coins>=5+(up.farmBot?0:0)){buySeeds(true);}
+  if(has('autoCraft')&&(autoT2-=.5)<=0){autoT2=2.2;
+    const pl=pipeline(),inFlight=items.filter(i=>!i.packed).length+spawnQ.length;
+    if(inFlight<3){const d=demand();
+      let pick=PKEYS.filter(k=>prodOn(k)&&d[k]-inv[k]-pl[k]>0&&canAfford(PROD[k].cost))[0];
+      if(!pick&&totalStock()+inFlight<(has('autoSell')?10:6))pick=PKEYS.filter(k=>prodOn(k)&&canAfford(PROD[k].cost)).sort((a,b)=>PROD[b].price-PROD[a].price)[0];
+      if(pick)craft(pick,true);}}
+  if(has('autoSell')&&!rocket.userData.fly){const d=demand(),sell={};let n=0;PKEYS.forEach(k=>{const s=Math.max(0,inv[k]-d[k]);sell[k]=s;n+=s;});if(n>=4)launch(sell,true);}
+  hud();
+}
+let autoT2=0;
+// ================= R&D lab =================
+const TIER_NAME=['','第一层 · 起步','第二层 · 自动化','第三层 · 生产线','第四层 · 全自动'];
+function applyUpgrade(id,silent){
+  const st=STN[id];if(st&&!st.g.visible){st.g.visible=true;col(st.x,st.z,.9);if(!silent){sparkle(new THREE.Vector3(st.x,1.5,st.z),18,'#ffd84d');puff(new THREE.Vector3(st.x,.3,st.z),10);}}
+  if(id==='farmExt'){extG.visible=true;if(!silent)sparkle(new THREE.Vector3(-11.8,1,8.2),18,'#7fe0b5');}
+  if(id==='farmBot'&&!silent)DR.pos.set(-9.2,6,-6);
+}
+function renderLab(){
+  $('labBal').textContent=`⭐ ${inv.coins}　💗 ${inv.hearts}　已研发 ${UPG.filter(u=>up[u.id]).length}/${UPG.length}`;
+  let h='';for(let t=1;t<=4;t++){h+=`<div class="tier">${TIER_NAME[t]}</div><div class="ugrid">`;
+    UPG.filter(u=>u.tier===t).forEach(u=>{const owned=!!up[u.id],locked=!owned&&(u.req||[]).some(r=>!up[r]),can=!owned&&!locked&&inv.coins>=u.c&&inv.hearts>=(u.h||0);
+      const cost=`⭐${u.c}${u.h?` 💗${u.h}`:''}`;let btn;
+      if(owned)btn=u.auto?`<button class="btn ${upOff[u.id]?'orange':''}" data-up="${u.id}">${upOff[u.id]?'▶ 启用':'⏸ 暂停这个自动化'}</button>`:'<span>✅ 已研发</span>';
+      else if(locked)btn=`<span class="muted">🔒 先研发：${u.req.filter(r=>!up[r]).map(r=>UPGBY[r].e+UPGBY[r].n).join('、')}</span>`;
+      else btn=`<button class="btn ${can?'orange':''}" data-up="${u.id}">研发 ${cost}</button>`;
+      h+=`<div class="ucard ${owned?'owned':locked?'locked':can?'can':''}"><h3>${u.e} ${u.n}${u.auto?' <span class="muted">自动化</span>':''}</h3><div>${u.d}</div>${btn}</div>`;});
+    h+='</div>';}
+  $('labGrid').innerHTML=h;}
+function buyUpgrade(id){const u=UPGBY[id];
+  if(up[id]){if(u.auto){upOff[id]=!upOff[id];SND.click();toast(`${u.e} ${u.n} 已${upOff[id]?'暂停':'启用'}`);renderAutoBar();renderLab();}return;}
+  if((u.req||[]).some(r=>!up[r]))return;
+  if(inv.coins<u.c||inv.hearts<(u.h||0)){SND.no();toast(`还差一点：需要 ⭐${u.c}${u.h?` 💗${u.h}`:''}`);return;}
+  inv.coins-=u.c;inv.hearts-=(u.h||0);up[id]=true;applyUpgrade(id,false);SND.perfect();SND.sparkle();toast(`🔬 研发成功：${u.e} ${u.n}！`);
+  hud.nudged=0;hud();renderOrders();renderAutoBar();renderLab();markSave();}
+$('labGrid').addEventListener('click',e=>{const b=e.target.closest('[data-up]');if(b)buyUpgrade(b.dataset.up);});
+function openLab(){renderLab();$('labScreen').classList.remove('hidden');}
+$('labBtn').onclick=openLab;
+// ================= Save / load =================
+let slotId=store.get('scc_slot','');if(!slotId){slotId='p'+Math.random().toString(36).slice(2,10);store.set('scc_slot',slotId);}
+const API=location.protocol.startsWith('http')?'/api':null;
+async function api(method,path,body){if(!API)throw new Error('no api');const ctl=new AbortController();const to=setTimeout(()=>ctl.abort(),3000);
+  try{const r=await fetch(API+path,{method,headers:body?{'Content-Type':'application/json'}:undefined,body:body?JSON.stringify(body):undefined,signal:ctl.signal});if(!r.ok)throw new Error(r.status);return await r.json();}finally{clearTimeout(to);}}
+const KIND_NAME={auto:'🔁 自动存档',manual:'💾 手动存档'};
+const saves={auto:null,manual:null},saveWhere={auto:'',manual:''};
+let sinceAuto=30,pendingAuto=false,dirty=false,suppressSave=false,paused=false;
+const fmtT=t=>new Date(t).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+const plainOrder=o=>({src:o.src,cust:o.cust,items:o.items,reward:o.reward});
+function snapshot(kind){return {v:2,kind,t:Date.now(),planet:planetName,inv:{...inv},up:{...up},upOff:{...upOff},
+  orders:orders.map(plainOrder),inbox:inbox.map(plainOrder),plots:plots.map(p=>[p.state,+p.t.toFixed(1)]),
+  belt:[...items.map(i=>[i.type,i.packed?1:0]),...spawnQ.map(k=>[k,0])],bal:B.order};}
+function restore(s){
+  Object.keys(inv).forEach(k=>{if(typeof (s.inv||{})[k]==='number')inv[k]=s.inv[k];});
+  UPG.forEach(u=>{up[u.id]=!!(s.up||{})[u.id];upOff[u.id]=!!(s.upOff||{})[u.id];});
+  if(s.planet){setPlanet(s.planet);$('nameInput').value=s.planet;}
+  const ok=o=>o&&o.items&&Object.keys(o.items).every(k=>PROD[k]);
+  (s.orders||[]).filter(ok).forEach(o=>orders.push(o));
+  (s.inbox||[]).filter(ok).forEach(o=>inbox.push(o));if(inbox.length){drawScreen(inbox.length,true);webSprite.visible=true;}
+  (s.plots||[]).forEach(([st,t],i)=>{const p=plots[i];if(!p||!['empty','grow','ripe'].includes(st))return;p.state=st;p.t=t||0;p.dur=growDur();p.crops.forEach(c=>c.visible=st!=='empty');});
+  (s.belt||[]).forEach(([k,pk])=>{if(!PROD[k])return;pk?inv[k]++:spawnQ.push(k);});
+  if(ok(s.bal)){B.order=s.bal;drawBubble(need(B.order),'想要包装好的商品～');}
+  UPG.forEach(u=>{if(up[u.id])applyUpgrade(u.id,true);});renderOrders();renderAutoBar();hud();}
+async function writeSave(kind){const s=snapshot(kind);store.set('scc_save_'+kind,JSON.stringify(s));let where='本地浏览器';
+  try{await api('POST',`/save/${slotId}-${kind}`,s);where='服务器';}catch(e){}
+  saves[kind]=s;saveWhere[kind]=where;renderSaveStatus();return where;}
+async function fetchSave(kind){let local=null,remote=null;try{local=JSON.parse(store.get('scc_save_'+kind,'null'));}catch(e){}
+  try{remote=(await api('GET',`/save/${slotId}-${kind}`)).save;}catch(e){}
+  const best=[local,remote].filter(x=>x&&x.v===2&&x.inv).sort((a,b)=>b.t-a.t)[0]||null;if(best)saveWhere[kind]=best===remote?'服务器':'本地浏览器';return best;}
+// auto-save only at milestones (≥30s apart), plus a 5-minute safety net
+function markSave(){pendingAuto=true;}
+function saveTick(dt){sinceAuto+=dt;if(suppressSave)return;if((pendingAuto&&sinceAuto>=30)||(dirty&&sinceAuto>=300)){sinceAuto=0;pendingAuto=false;dirty=false;writeSave('auto');}}
+function flushAuto(){if(suppressSave||!started)return;const s=snapshot('auto');store.set('scc_save_auto',JSON.stringify(s));saves.auto=s;sinceAuto=0;pendingAuto=false;dirty=false;
+  saveWhere.auto=(API&&navigator.sendBeacon&&navigator.sendBeacon(`${API}/save/${slotId}-auto`,new Blob([JSON.stringify(s)],{type:'application/json'})))?'服务器':'本地浏览器';}
+function renderSaveStatus(){$('saveStatus').innerHTML=['auto','manual'].map(k=>{const s=saves[k];
+  return `<div style="margin:4px 0">${KIND_NAME[k]}：${s?`${fmtT(s.t)} · ⭐${s.inv.coins} · ${saveWhere[k]||''} <button class="btn" data-load="${k}">读取</button>`:'<span class="muted">还没有</span>'}</div>`;}).join('');}
+function loadKind(k){if(!saves[k])return;suppressSave=true;store.set('scc_load',k);location.reload();}
+$('saveStatus').addEventListener('click',e=>{const b=e.target.closest('[data-load]');if(b)loadKind(b.dataset.load);});
+async function loadBoard(){const el=$('board');
+  try{const {top}=await api('GET','/leaderboard');el.innerHTML='<b>🏆 银河排行榜</b>（累计收入）<br>'+(top.length?top.map((r,i)=>`${['🥇','🥈','🥉'][i]||(i+1)+'.'} 🪐 ${r.planet.replace(/[<>&]/g,'')} — ⭐${r.earned} · 💗${r.hearts} · 研发 ${r.unlocks}`).join('<br>'):'<span class="muted">还没有人上榜</span>');}
+  catch(e){el.innerHTML='<b>🏆 银河排行榜</b><br><span class="muted">用 <kbd>python3 server.py</kbd> 启动后端就能看到排行榜啦</span>';}}
+function setPause(v){paused=v;$('pauseScreen').classList.toggle('hidden',!v);if(v){renderSaveStatus();loadBoard();}}
+$('bPause').onclick=()=>{if(started)setPause(true);};$('bResume').onclick=()=>setPause(false);
+$('bSaveNow').onclick=async()=>{const w=await writeSave('manual');toast(`💾 手动存档已保存到${w}`);};
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&started){if(!frozen())setPause(true);flushAuto();}});
+addEventListener('pagehide',flushAuto);
 renderOrders();
 
 // ================= Input =================
 const keys={};
-addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;keys[e.code]=true;if(e.code==='Space'){doJump();e.preventDefault();}if(e.code==='KeyE'||e.code==='Enter')doAct();});
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;
+  if(e.code==='Escape'||e.code==='KeyP'){if(!started)return;const open=[...document.querySelectorAll('.overlay:not(.hidden)')];
+    if(open.length){if(e.code==='Escape'||(open.length===1&&paused)){open.forEach(o=>o.classList.add('hidden'));paused=false;}}else setPause(true);return;}
+  if(frozen())return;
+  if(e.code==='KeyR'&&started){openLab();return;}
+  keys[e.code]=true;if(e.code==='Space'){doJump();e.preventDefault();}if(e.code==='KeyE'||e.code==='Enter')doAct();});
 addEventListener('keyup',e=>{keys[e.code]=false;});
 const isTouch=matchMedia('(pointer:coarse)').matches||'ontouchstart' in window;if(isTouch)document.body.classList.add('touch');
 const joy={x:0,y:0,id:null};
@@ -882,12 +1168,15 @@ $('bMusic').onclick=()=>{SND.init();SND.setMusic(!SND.music);syncAudioBtns();toa
 $('bSfx').onclick=()=>{SND.init();SND.setSfx(!SND.sfx);syncAudioBtns();SND.click();};
 document.querySelectorAll('.btn').forEach(b=>b.addEventListener('click',()=>SND.click()));
 $('bReset').onclick=()=>$('resetScreen').classList.remove('hidden');
-$('bResetOk').onclick=()=>location.reload();
+$('bResetOk').onclick=async()=>{suppressSave=true;['auto','manual'].forEach(k=>store.set('scc_save_'+k,'null'));
+  try{await Promise.all(['auto','manual'].map(k=>api('DELETE',`/save/${slotId}-${k}`)));}catch(e){}location.reload();};
 $('bHelp').onclick=()=>$('helpScreen').classList.remove('hidden');
 $('bRename').onclick=()=>{$('renameInput').value=planetName;$('renameScreen').classList.remove('hidden');};
 $('bRenameOk').onclick=()=>{setPlanet($('renameInput').value);$('renameScreen').classList.add('hidden');toast(`🪐 欢迎来到 ${planetName}！`);};
 let started=false;
-$('bStart').onclick=()=>{SND.init();setPlanet($('nameInput').value);$('startScreen').classList.add('hidden');started=true;toast(`🪐 欢迎来到 ${planetName}！`);setTimeout(()=>toast('🌱 先去左边的农场种萝卜吧～'),1200);};
+function beginGame(msg){SND.init();$('startScreen').classList.add('hidden');started=true;toast(msg||`🪐 欢迎来到 ${planetName}！`);hud();}
+$('bStart').onclick=()=>{setPlanet($('nameInput').value);beginGame();setTimeout(()=>toast('🌱 先去左边的农场种萝卜吧～'),1200);setTimeout(()=>toast('🔬 赚到星星币后，去研发中心解锁自动化（按 R）'),5000);};
+$('contInfo').addEventListener('click',e=>{const b=e.target.closest('[data-load]');if(!b||!saves[b.dataset.load])return;restore(saves[b.dataset.load]);beginGame(`📂 已读取${KIND_NAME[b.dataset.load]}，欢迎回到 ${planetName}！`);});
 
 // ================= Loop =================
 const clock=new THREE.Clock();let T=0;
@@ -902,7 +1191,9 @@ function follower(pet,owner,offset,dt,hop=1){const tgt=owner.clone().add(offset)
     body.position.y=Math.abs(Math.sin(pet.userData.t*4.2))*.7*hop;}else{body.position.y*=.9;body.rotation.z=Math.sin(pet.userData.t*2)*.05;}
   const p=pet.position;resolve(p,.3);}
 
+const frozen=()=>started&&(paused||!!document.querySelector('.overlay:not(.hidden)'));
 function loop(){
+  if(frozen()){clock.getDelta();$('prompt').style.display='none';renderer.render(scene,camera);requestAnimationFrame(loop);return;}
   const dt=Math.min(clock.getDelta(),.05);T+=dt;
   // ---- player ----
   let ix=0,iy=0;
@@ -930,19 +1221,21 @@ function loop(){
     else{B.wait=rand(2,5);B.target.set(rand(-4,5),0,rand(1.5,7.5));if(Math.random()<.35){B.dance=2.2;B.vy=4;B.ground=false;}}}
   if(!B.ground){B.vy-=G*dt;B.pos.y+=B.vy*dt;if(B.pos.y<=0){B.pos.y=0;B.ground=true;B.vy=0;puff(B.pos.clone().setY(.1),5);}}
   resolve(B.pos);ballerina.position.copy(B.pos);
-  if(started){if(!B.order){B.cool-=dt;if(B.cool<=0){B.order={juice:1+Math.floor(Math.random()*2),box:Math.floor(Math.random()*2)};drawBubble(`🧃×${B.order.juice}  📦×${B.order.box}`,'想要包装好的商品～');if(!B.greet){B.greet=true;toast('🩰 芭蕾舞访客来下订单啦！看她头上的气泡');}}}}
+  if(started){if(!B.order){B.cool-=dt;if(B.cool<=0){const its=randItems(2,2);B.order={items:its,reward:itemsValue(its)*2};drawBubble(need(B.order),'想要包装好的商品～');if(!B.greet){B.greet=true;toast('🩰 芭蕾舞访客来下订单啦！看她头上的气泡');}}}}
   bubble.position.copy(B.pos).add(new THREE.Vector3(0,3.25+Math.sin(T*2)*.06,0));
   follower(cat,B.pos,new THREE.Vector3(Math.sin(B.rot+2.2)*1.1,0,Math.cos(B.rot+2.2)*1.1),dt,.5);
   cat.userData.tail.rotation.x=Math.sin(T*3)*.3;
   // ---- plots ----
   plots.forEach(p=>{if(p.state==='grow'){p.t+=dt;const k=Math.min(1,p.t/p.dur);p.crops.forEach((c,i)=>{c.position.y=-.45+.42*k;c.scale.setScalar(.45+.55*k);c.userData.star.visible=false;c.rotation.z=Math.sin(T*2+i)*.05;});if(k>=1){p.state='ripe';if(Math.hypot(P.pos.x-p.x,P.pos.z-p.z)<12)SND.sparkle();sparkle(new THREE.Vector3(p.x,1,p.z),8);}}
     if(p.state==='ripe'){p.glow.material.opacity=.5+.3*Math.sin(T*4);p.crops.forEach((c,i)=>{c.userData.star.visible=true;c.userData.star.rotation.y+=dt*3;c.position.y=.02+Math.sin(T*2.5+i)*.06;c.rotation.z=Math.sin(T*2+i)*.1;});}});
+  BELT.speed=up.fastBelt?2.07:1.15;
+  updateAuto(dt);saveTick(dt);
   // ---- belt ----
   beltTex.offset.x-=dt*BELT.speed/ (8.8/8);
   if(spawnQ.length&&!items.some(i=>i.x<BELT.x0+.8))spawnItem(spawnQ.shift());
-  for(let i=items.length-1;i>=0;i--){const it=items[i];const blocked=items.some(o=>o!==it&&o.x>it.x&&o.x-it.x<.7);if(!it.packed&&it.x>=BELT.zone){it.x=BELT.zone;it.wait=(it.wait||0)+dt;}else if(!blocked)it.x+=BELT.speed*dt;it.m.position.x=it.x;
+  for(let i=items.length-1;i>=0;i--){const it=items[i];const blocked=items.some(o=>o!==it&&o.x>it.x&&o.x-it.x<.7);if(!it.packed&&it.x>=BELT.zone){it.x=BELT.zone;it.wait=(it.wait||0)+dt;if(has('autoPack')&&it.wait>1.5)packItem(it,false);}else if(!blocked)it.x+=BELT.speed*dt;it.m.position.x=it.x;
     if(it.pop>0){it.pop-=dt;it.m.scale.setScalar(1+Math.sin(it.pop/.4*Math.PI)*.35);}else it.m.scale.setScalar(1);
-    if(it.x>=BELT.x1){if(it.packed){SND.pop();it.type==='juice'?inv.juice++:inv.box++;toast(it.type==='juice'?'🧃 包装好的萝卜汁 +1':'📦 星际萝卜礼盒 +1');sparkle(new THREE.Vector3(14.8,1,-1),6);scene.remove(it.m);items.splice(i,1);hud();}
+    if(it.x>=BELT.x1){if(it.packed){SND.pop();inv[it.type]++;if(!has('autoCraft'))toast(`${PROD[it.type].e} 包装好的${PROD[it.type].n} +1`);sparkle(new THREE.Vector3(14.8,1,-1),6);scene.remove(it.m);items.splice(i,1);hud();}
       }}
   {const w=items.some(i=>!i.packed&&i.x>=BELT.zone-.01);packHint.visible=w;if(w)packHint.position.y=3.6+Math.sin(T*6)*.12;}
   zoneMat.opacity=.35+.2*Math.sin(T*6);
@@ -966,7 +1259,7 @@ function loop(){
   // fx
   for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.life-=dt;f.up(dt,f);if(f.life<=0){scene.remove(f.m);fx.splice(i,1);}}
   // interaction prompt
-  nearest=null;let nd=1e9;if(started)for(const it of interactables){const d=it.pos().clone().setY(0).distanceTo(P.pos.clone().setY(0));if(d<it.r&&d<nd){nd=d;nearest=it;}}
+  nearest=null;let nd=1e9;if(started)for(const it of interactables){if(it.on&&!it.on())continue;const d=it.pos().clone().setY(0).distanceTo(P.pos.clone().setY(0));if(d<it.r&&d<nd){nd=d;nearest=it;}}
   const pr=$('prompt');if(nearest){pr.style.display='block';pr.innerHTML=`<b>${isTouch?'互动':'E'}</b>${nearest.label()}`;}else pr.style.display='none';
   // camera
   camDist+=(camDistT-camDist)*Math.min(1,dt*8);const camT=P.pos.clone().add(new THREE.Vector3(Math.sin(yaw)*camDist,camDist*.7+P.pos.y*.3,Math.cos(yaw)*camDist));
@@ -976,7 +1269,12 @@ function loop(){
   renderer.render(scene,camera);
   requestAnimationFrame(loop);
 }
-camera.position.set(0,8,13);hud();loop();
+camera.position.set(0,8,13);renderAutoBar();hud();loop();
+saves.auto=await fetchSave('auto');saves.manual=await fetchSave('manual');
+{const want=store.get('scc_load','');store.set('scc_load','');
+ if(want&&saves[want]){restore(saves[want]);beginGame(`📂 已读取${KIND_NAME[want]}，欢迎回到 ${planetName}！`);}
+ else{const ks=['auto','manual'].filter(k=>saves[k]);if(ks.length){$('contRow').classList.remove('hidden');$('bStart').textContent='🚀 开一家新公司';
+   $('contInfo').innerHTML=ks.map(k=>`<button class="btn pink" data-load="${k}" style="margin:4px">${KIND_NAME[k]}<br><small>${fmtT(saves[k].t)} · 🪐${String(saves[k].planet||'').replace(/[<>&]/g,'')} · ⭐${saves[k].inv.coins}</small></button>`).join('');}}}
 })();
 </script>
 </body>
